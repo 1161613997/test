@@ -1,15 +1,65 @@
 package test;
 
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 public class TestController {
+
+    Logger bizLogger =  LoggerFactory.getLogger(TestController.class);
 
     @GetMapping("test")
     public String test(){
       System.out.println("123");
      return "hello world";
+    }
+    @PostMapping("callBack")
+    public Map<String, String> callBack(
+            @RequestParam(value = "msg_signature", required = false) String msg_signature,
+            @RequestParam(value = "timestamp", required = false) String timeStamp,
+            @RequestParam(value = "nonce", required = false) String nonce,
+            @RequestBody(required = false) JSONObject json) {
+        try {
+            // 1. 从http请求中获取加解密参数
+
+            // 2. 使用加解密类型
+            // Constant.OWNER_KEY 说明：
+            // 1、开发者后台配置的订阅事件为应用级事件推送，此时OWNER_KEY为应用的APP_KEY。
+            // 2、调用订阅事件接口订阅的事件为企业级事件推送，
+            //      此时OWNER_KEY为：企业的appkey（企业内部应用）或SUITE_KEY（三方应用）
+            DingCallbackCrypto callbackCrypto = new DingCallbackCrypto("f1CJFXyMi5w2TJnAK8dgPnWOMY8HRjnE3OtCJwEUO1qbfij", "zV7MNxa4qgMkwMj4PlhkiE3DRqjzR6O8TNMA4bUYuoQ","ding2wuz8hem81d3idqv");
+            String encryptMsg = json.getString("encrypt");
+            String decryptMsg = callbackCrypto.getDecryptMsg(msg_signature, timeStamp, nonce, encryptMsg);
+
+            // 3. 反序列化回调事件json数据
+            JSONObject eventJson = JSON.parseObject(decryptMsg);
+            String eventType = eventJson.getString("EventType");
+
+            // 4. 根据EventType分类处理
+            if ("check_url".equals(eventType)) {
+                // 测试回调url的正确性
+                bizLogger.info("测试回调url的正确性");
+            } else if ("user_add_org".equals(eventType)) {
+                // 处理通讯录用户增加事件
+                bizLogger.info("发生了：" + eventType + "事件");
+            } else {
+                // 添加其他已注册的
+                bizLogger.info("发生了：" + eventType + "事件");
+            }
+
+            // 5. 返回success的加密数据
+            Map<String, String> successMap = callbackCrypto.getEncryptedMap("success");
+            return successMap;
+
+        } catch (DingCallbackCrypto.DingTalkEncryptException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
