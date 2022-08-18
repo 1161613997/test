@@ -39,4 +39,50 @@
         </dependency>
     </dependencies>
 
+
+    <properties>
+        <docker.image.prefix>docker</docker.image.prefix>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>1.0.0</version>
+
+                <configuration>
+                    <imageName>${docker.image.prefix}/${project.artifactId}</imageName>
+                    <!--指定标签-->
+                    <imageTags>
+                        <imageTag>${project.version}</imageTag>
+                    </imageTags>
+                    <!-- 基础镜像jdk 1.8-->
+                    <baseImage>java:8</baseImage>
+                    <!--切换到/ROOT目录 -->
+                    <workdir>/app</workdir>
+                    <cmd>["java", "-Xmx512m", "-Xms512m", "-jar", "/app/${project.build.finalName}.jar"]</cmd>
+                    <!--指定远程 docker api地址-->
+                    <dockerHost>http://43.138.223.111:2375</dockerHost>
+                    <!-- 这里是复制 jar 包到 docker 容器指定目录配置 -->
+                    <resources>
+                        <resource>
+                            <targetPath>/app</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                </configuration>
+
+            </plugin>
+
+
+        </plugins>
+    </build>
+
 </project>
